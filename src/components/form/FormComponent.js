@@ -29,17 +29,13 @@ const FormComponent = () => {
         throw new Error(error_messages.cityNotFound);
       }
       const data = await response.json();
-      const cloudiness = data.clouds.all;
-      const windSpeed = data.wind.speed;
-      const feelsLike = data.main.feels_like;
-
       setWeather({
         temp: data.main.temp,
         icon: data.weather[0].icon,
         country: data.sys.country,
-        clouds: cloudiness,
-        wind: windSpeed,
-        feels_like: feelsLike,
+        clouds: data.clouds.all,
+        wind: data.wind.speed,
+        feels_like: data.main.feels_like,
       });
     } catch (error) {
       const errorMessage =
