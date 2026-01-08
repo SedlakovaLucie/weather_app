@@ -13,7 +13,7 @@
     padding: 10px;
     border: var(--greyInputBorder);
     box-shadow: var(--BoxShadow);
-    transition: all 0.s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     font-size: 1rem;
     text-align: center;
 }
@@ -32,7 +32,7 @@
     padding: 10px;
     border: 2px solid var(--red);
     box-shadow: var(--BoxShadow);
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     font-size: 1rem;
     text-align: center;
 }

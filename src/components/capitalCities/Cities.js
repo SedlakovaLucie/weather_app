@@ -1,5 +1,5 @@
 import "./Cities.css";
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import OneCity from "./OneCity";
 import cityImages from "./CityImages";
 
@@ -8,52 +8,85 @@ const Cities = () => {
     "Prague",
     "New York",
     "London",
-    "Moskva",
+    "Moscow",
     "Rio de Janeiro",
   ];
-  const [weatherData, setWeatherData] = useState([]);
+
+  const [weatherData, setWeatherData] = useState(() =>
+    cityNames.map((c) => ({ requestedCity: c, city: c, temp: null }))
+  );
+
   const [error, setError] = useState("");
   const errorMessage =
     "Počasí momentálně nelze načíst. Zkontrolujte připojení nebo to zkuste později.";
+
   const apiKey = process.env.REACT_APP_OPENWEATHER_API_KEY;
 
-  const getWeatherData = async (city) => {
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`;
+  const getWeatherData = async (requestedCity) => {
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+      requestedCity
+    )}&units=metric&appid=${apiKey}`;
+
     try {
       const response = await fetch(url);
-      if (!response.ok) throw new Error(errorMessage);
+      if (!response.ok) throw new Error("fetch_failed");
+
       const data = await response.json();
-      return {
-        city: data.name,
-        temp: data.main.temp,
-      };
-    } catch (error) {
-      setError(errorMessage);
-      return { city: city, temp: "N/A" };
+      return { city: data.name, temp: data.main.temp, ok: true };
+    } catch {
+      return { city: requestedCity, temp: "-", ok: false };
     }
   };
 
-  const fetchWeatherData = async () => {
-    const promises = cityNames.map((city) => getWeatherData(city));
-    const results = await Promise.all(promises);
-    setWeatherData(results);
-  };
-
   useEffect(() => {
-    fetchWeatherData();
+    let cancelled = false;
+    setError("");
+
+    setWeatherData(
+      cityNames.map((c) => ({ requestedCity: c, city: c, temp: null }))
+    );
+
+    (async () => {
+      const results = await Promise.all(
+        cityNames.map(async (requestedCity) => {
+          const result = await getWeatherData(requestedCity);
+          return { requestedCity, ...result };
+        })
+      );
+
+      if (cancelled) return;
+
+      if (results.some((r) => !r.ok)) {
+        setError(errorMessage);
+      }
+
+      setWeatherData(
+        results.map(({ requestedCity, city, temp }) => ({
+          requestedCity,
+          city,
+          temp,
+        }))
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
     <div className="cities-section">
       <h2>Teploty ve světových městech</h2>
-      {error && <p className="error-message">{errorMessage}</p>}
+      {error && <p className="error-message">{error}</p>}
+
       <div className="cities-container">
-        {weatherData.map(({ city, temp }, index) => (
+        {weatherData.map(({ requestedCity, city, temp }) => (
           <OneCity
-            key={index}
+            key={requestedCity}
             city={city}
             temperature={temp}
-            image={cityImages[city]}
+            isLoadingData={temp === null}
+            image={cityImages[requestedCity]}
           />
         ))}
       </div>

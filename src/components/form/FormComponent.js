@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import "./FormComponent.css";
 
 const error_messages = {
@@ -11,38 +11,43 @@ const error_messages = {
 const FormComponent = () => {
   const [weather, setWeather] = useState(null);
   const [cityName, setCityName] = useState("");
+  const [searchedCity, setSearchedCity] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const cityRef = useRef("");
+
   const apiKey = process.env.REACT_APP_OPENWEATHER_API_KEY;
+
   const isValidCityName = (input) => /^[a-zA-Zá-žÁ-Ž\s]+$/.test(input);
 
-  const getWeather = async () => {
+  const getWeather = async (city) => {
     setIsLoading(true);
     setError("");
 
-    //URL for OpenWeatherMap API: https://openweathermap.org/current
-    const url = `https://api.openweathermap.org/data/2.5/weather?q=${cityRef.current}&units=metric&appid=${apiKey}`;
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+      city
+    )}&units=metric&appid=${apiKey}`;
+
     try {
       const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(error_messages.cityNotFound);
-      }
+      if (!response.ok) throw new Error(error_messages.cityNotFound);
+
       const data = await response.json();
+
       setWeather({
         temp: data.main.temp,
-        icon: data.weather[0].icon,
+        feels_like: data.main.feels_like,
+        icon: data.weather?.[0]?.icon,
         country: data.sys.country,
         clouds: data.clouds.all,
         wind: data.wind.speed,
-        feels_like: data.main.feels_like,
       });
-    } catch (error) {
-      const errorMessage =
-        error.message === "Failed to fetch" || error.message === "Load failed"
+    } catch (err) {
+      const message =
+        err?.message === "Failed to fetch" || err?.message === "Load failed"
           ? error_messages.fetchError
-          : error.message;
-      setError(errorMessage);
+          : err?.message || error_messages.fetchError;
+
+      setError(message);
       setWeather(null);
     } finally {
       setIsLoading(false);
@@ -51,67 +56,68 @@ const FormComponent = () => {
 
   const formSubmit = (e) => {
     e.preventDefault();
-    if (!isValidCityName(cityName)) {
+
+    const normalized = cityName.trim();
+
+    if (!normalized || !isValidCityName(normalized)) {
       setError(error_messages.invalidCityName);
       return;
     }
-
-    cityRef.current = cityName;
+    setSearchedCity(normalized);
     setCityName("");
-
-    getWeather();
+    getWeather(normalized);
   };
 
   return (
     <div>
-      <div>
-        <form className="form-section" onSubmit={formSubmit}>
-          <input
-            type="text"
-            placeholder="Název města"
-            value={cityName}
-            onChange={(event) => setCityName(event.target.value)}
-            className={error ? "input-error" : "input-city"}
-          />
-          {error && <p className="error">{error}</p>}
-          <button className="button-city" type="submit">
-            Hledat
-          </button>
-        </form>
-      </div>
-      {weather && (
+      <form className="form-section" onSubmit={formSubmit}>
+        <input
+          type="text"
+          placeholder="Název města"
+          value={cityName}
+          onChange={(event) => setCityName(event.target.value)}
+          className={error ? "input-error" : "input-city"}
+        />
+
+        {error && <p className="error">{error}</p>}
+
+        <button className="button-city" type="submit" disabled={isLoading}>
+          {isLoading ? "Načítám..." : "Hledat"}
+        </button>
+      </form>
+
+      {(isLoading || weather) && (
         <div className="weather-card">
-          {cityRef.current && <h2>{cityRef.current}</h2>}
+          {searchedCity && <h2>{searchedCity}</h2>}
 
           {isLoading ? (
             <h2>Načítání dat...</h2>
           ) : (
-            (() => {
-              const { temp, icon, country, clouds, wind } = weather;
-              return (
-                <div className="weather-data">
-                  <p>{country}</p>
-                  <img
-                    className="weather-image"
-                    src={`https://openweathermap.org/img/wn/${icon}@2x.png`}
-                    alt="Ikona počasí"
-                  />
-                  <p>
-                    Teplota: <span className="value">{temp} °C</span>
-                  </p>
-                  <p>
-                    Pocitová teplota:{" "}
-                    <span className="value">{weather.feels_like} °C</span>
-                  </p>
-                  <p>
-                    Oblačnost: <span className="value">{clouds} %</span>
-                  </p>
-                  <p>
-                    Rychlost větru: <span className="value">{wind} m/s</span>
-                  </p>
-                </div>
-              );
-            })()
+            <div className="weather-data">
+              <p>{weather.country}</p>
+
+              {weather.icon && (
+                <img
+                  className="weather-image"
+                  src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+                  alt="Ikona počasí"
+                />
+              )}
+              <p>
+                Teplota: <span className="value">{weather.temp} °C</span>
+              </p>
+              <p>
+                Pocitová teplota:{" "}
+                <span className="value">{weather.feels_like} °C</span>
+              </p>
+              <p>
+                Oblačnost: <span className="value">{weather.clouds} %</span>
+              </p>
+              <p>
+                Rychlost větru:{" "}
+                <span className="value">{weather.wind} m/s</span>
+              </p>
+            </div>
           )}
         </div>
       )}

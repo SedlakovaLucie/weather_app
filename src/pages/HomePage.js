@@ -5,9 +5,12 @@ import TabContent from "../components/description/TabContent";
 const HomePage = () => {
   return (
     <div>
-      <HeroSection title="Aktuální počasí" />
+      <HeroSection
+        title="Aktuální počasí"
+        subtitle="Teploty ve světových městech"
+      />
       <Cities />
-      <TabContent/>
+      <TabContent />
     </div>
   );
 };
