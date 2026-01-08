@@ -76,7 +76,6 @@ const Cities = () => {
 
   return (
     <div className="cities-section">
-      <h2>Teploty ve světových městech</h2>
       {error && <p className="error-message">{error}</p>}
 
       <div className="cities-container">
