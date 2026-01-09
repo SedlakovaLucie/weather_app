@@ -22,17 +22,18 @@ const Cities = () => {
 
   const apiKey = process.env.REACT_APP_OPENWEATHER_API_KEY;
 
-  const getWeatherData = async (requestedCity) => {
+  // ------------------------------------------stáhnout počasí z API pro jedno město
+  const fetchWeather = async (requestedCity) => {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
       requestedCity
     )}&units=metric&appid=${apiKey}`;
 
     try {
       const response = await fetch(url);
-      if (!response.ok) throw new Error("fetch_failed");
-
+      if (!response.ok) throw new Error("fetch failed");
       const data = await response.json();
       return { city: data.name, temp: data.main.temp, ok: true };
+      // při chybě
     } catch {
       return { city: requestedCity, temp: "-", ok: false };
     }
@@ -42,24 +43,28 @@ const Cities = () => {
     let cancelled = false;
     setError("");
 
+    // zobrazit skeleton - nastavit temp: null pro všechna města
     setWeatherData(
       cityNames.map((c) => ({ requestedCity: c, city: c, temp: null }))
     );
 
+    // načíst data pro všechna města paralelně
     (async () => {
       const results = await Promise.all(
         cityNames.map(async (requestedCity) => {
-          const result = await getWeatherData(requestedCity);
+          const result = await fetchWeather(requestedCity);
           return { requestedCity, ...result };
         })
       );
 
       if (cancelled) return;
 
+      // zobrazit error, když selže minimálně jeden request
       if (results.some((r) => !r.ok)) {
         setError(errorMessage);
       }
 
+      // skeleton se nahradí reálnými hodnotami
       setWeatherData(
         results.map(({ requestedCity, city, temp }) => ({
           requestedCity,
@@ -68,7 +73,7 @@ const Cities = () => {
         }))
       );
     })();
-
+    //cleanup
     return () => {
       cancelled = true;
     };

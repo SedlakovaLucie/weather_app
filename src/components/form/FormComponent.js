@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./FormComponent.css";
 
 const error_messages = {
@@ -14,14 +14,21 @@ const FormComponent = () => {
   const [searchedCity, setSearchedCity] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const inputRef = useRef(null);
 
   const apiKey = process.env.REACT_APP_OPENWEATHER_API_KEY;
 
   const isValidCityName = (input) => /^[a-zA-Zá-žÁ-Ž\s]+$/.test(input);
 
-  const getWeather = async (city) => {
+  //focus na input po načtení komponenty
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // ------------------------------------------stáhnout počasí z API
+  const fetchWeather = async (city) => {
     setIsLoading(true);
-    setError("");
+    setError(""); // vyčistit starou chybu
 
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
       city
@@ -32,12 +39,11 @@ const FormComponent = () => {
       if (!response.ok) throw new Error(error_messages.cityNotFound);
 
       const data = await response.json();
-
       setWeather({
+        country: data.sys.country,
+        icon: data.weather?.[0]?.icon,
         temp: data.main.temp,
         feels_like: data.main.feels_like,
-        icon: data.weather?.[0]?.icon,
-        country: data.sys.country,
         clouds: data.clouds.all,
         wind: data.wind.speed,
       });
@@ -54,6 +60,7 @@ const FormComponent = () => {
     }
   };
 
+  //------------------------------------------Formulář
   const formSubmit = (e) => {
     e.preventDefault();
 
@@ -63,15 +70,18 @@ const FormComponent = () => {
       setError(error_messages.invalidCityName);
       return;
     }
-    setSearchedCity(normalized);
+    setSearchedCity(normalized); // uložit hledané město pro zobrazení v kartě
     setCityName("");
-    getWeather(normalized);
+    fetchWeather(normalized);
+    inputRef.current?.focus();
   };
 
   return (
     <div>
+      {/* formulář */}
       <form className="form-section" onSubmit={formSubmit}>
         <input
+          ref={inputRef}
           type="text"
           placeholder="Název města"
           value={cityName}
@@ -85,7 +95,7 @@ const FormComponent = () => {
           {isLoading ? "Načítám..." : "Hledat"}
         </button>
       </form>
-
+      {/* karta */}
       {(isLoading || weather) && (
         <div className="weather-card">
           {searchedCity && <h2>{searchedCity}</h2>}
